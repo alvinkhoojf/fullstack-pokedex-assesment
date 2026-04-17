@@ -25,12 +25,36 @@ class PokemonController extends Controller
 
         $data = $response->json();
 
-        return response()->json([
-            'message' => 'Pokemon fetched succesfully',
-            'page' => $page,
-            'limit' => $limit,
-            'offset' => $offset,
-            'data' => $data
-        ]);
+        $results = [];
+
+        foreach($data['results'] as $item) {
+            $getDetails = Http::get($item['url']);
+
+            if ($getDetails->failed()) {
+                return response()->json([
+                    'message' => 'Failed to get Pokemon details'
+                ], 500);
+            }
+
+            $details = $getDetails->json();
+
+            $types = [];
+
+            foreach($details['types'] as $type) {
+                $types[] = $type['type']['name'];
+            }
+
+            $results[] = [
+                'name' => $details['name'],
+                'image' => $details['sprites']['other']['official-artwork']['front_default'],
+                'types' => $types,
+                'height' => $details['height'],
+                'weight' => $details['weight'],
+            ];
+        }
+
+        return $results;
     }
+
+    
 }
