@@ -9,12 +9,13 @@ class PokemonController extends Controller
 {
     public function index(Request $request) {
         $page = $request->query('page', 1);
-        $limit = $request->query('limit', 10);
+        $limit = $request->query('limit', 12);
+        $search = strtolower(trim($request->query('search', '')));
         $offset = ($page - 1) * $limit;
 
         $response = Http::get('https://pokeapi.co/api/v2/pokemon', [
-            'limit' => $limit,
-            'offset' => $offset
+            'limit' => $search ? 2000 : $limit,
+            'offset' => $search ? 0 : $offset
         ]);
 
         if ($response->failed()) {
@@ -24,10 +25,19 @@ class PokemonController extends Controller
         }
 
         $data = $response->json();
+        $pokemonList = $data['results'];
+
+        if ($search) {
+            $pokemonList = array_values(array_filter($pokemonList, function ($item) use ($search) {
+                return str_contains($item['name'], $search);
+            }));
+
+            $pokemonList = array_slice($pokemonList, $offset, $limit); // extract the search result, without modifiying the original data
+        }
 
         $results = [];
 
-        foreach($data['results'] as $item) {
+        foreach($pokemonList as $item) {
             $getDetails = Http::get($item['url']);
 
             if ($getDetails->failed()) {
