@@ -8,14 +8,13 @@ use Illuminate\Support\Facades\Http;
 class PokemonController extends Controller
 {
     public function index(Request $request) {
-        $page = max((int) $request->query('page', 1), 1);
-        $limit = max((int) $request->query('limit', 10), 1);
-        $search = strtolower(trim($request->query('search', '')));
+        $page = $request->query('page', 1);
+        $limit = $request->query('limit', 10);
         $offset = ($page - 1) * $limit;
 
         $response = Http::get('https://pokeapi.co/api/v2/pokemon', [
-            'limit' => $search ? 2000 : $limit,
-            'offset' => $search ? 0 : $offset
+            'limit' => $limit,
+            'offset' => $offset
         ]);
 
         if ($response->failed()) {
@@ -25,19 +24,10 @@ class PokemonController extends Controller
         }
 
         $data = $response->json();
-        $pokemonList = $data['results'];
-
-        if ($search) {
-            $pokemonList = array_values(array_filter($pokemonList, function ($item) use ($search) {
-                return str_contains($item['name'], $search);
-            }));
-
-            $pokemonList = array_slice($pokemonList, $offset, $limit);
-        }
 
         $results = [];
 
-        foreach($pokemonList as $item) {
+        foreach($data['results'] as $item) {
             $getDetails = Http::get($item['url']);
 
             if ($getDetails->failed()) {
